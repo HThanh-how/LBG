@@ -576,6 +576,7 @@ export default function DashboardPage() {
               data={reportData.data}
               weekNumber={activeTab}
               onSave={handleSave}
+              subjects={subjects}
             />
           ) : (
             <div className="text-center py-8 text-gray-500">

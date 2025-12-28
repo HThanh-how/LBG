@@ -21,6 +21,31 @@ def get_weekly_report_service(db: Session = Depends(get_db)) -> WeeklyReportServ
     return WeeklyReportService(db)
 
 
+@router.get("/lessons/{subject_name}")
+@limiter.limit("30/minute")
+def get_lessons_by_subject(
+    request: Request,
+    subject_name: str = Path(..., description="Tên môn học"),
+    current_user: User = Depends(get_current_user),
+    weekly_service: WeeklyReportService = Depends(get_weekly_report_service),
+):
+    """
+    Lấy danh sách các tiết học của một môn học
+    """
+    teaching_programs = weekly_service.teaching_program_repo.get_by_user_id(current_user.id)
+    lessons = [
+        {
+            "lesson_index": tp.lesson_index,
+            "lesson_name": tp.lesson_name,
+        }
+        for tp in teaching_programs
+        if tp.subject_name == subject_name
+    ]
+    # Sắp xếp theo lesson_index
+    lessons.sort(key=lambda x: x["lesson_index"])
+    return {"subject_name": subject_name, "lessons": lessons}
+
+
 def get_export_service() -> ExportService:
     return ExportService()
 

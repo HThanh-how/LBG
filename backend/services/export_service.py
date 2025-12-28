@@ -491,9 +491,12 @@ class ExportService:
             for log in weekly_logs
         }
         
-        timetable_map = {
-            (t.day_of_week, t.period_index): t for t in timetables
-        }
+        # Tạo timetable_map, nếu có nhiều timetable cho cùng slot, chỉ lấy 1 cái đầu tiên
+        timetable_map = {}
+        for t in timetables:
+            key = (t.day_of_week, t.period_index)
+            if key not in timetable_map:
+                timetable_map[key] = t
         
         week_start, week_end = get_week_dates(datetime.now().year, week_number)
         week_start_date = week_start.date() if hasattr(week_start, 'date') else week_start
@@ -538,6 +541,28 @@ class ExportService:
                                 break
         
         data = [["Thứ", "Tiết", "Môn học", "Tên bài dạy", "Lồng ghép"]]
+        
+        # Tính số tiết mỗi tuần cho mỗi môn (dựa trên TKB)
+        # Chỉ đếm các slot (day_of_week, period_index) duy nhất cho mỗi môn
+        subject_periods_per_week = defaultdict(set)
+        for t in timetables:
+            subject_periods_per_week[t.subject_name].add((t.day_of_week, t.period_index))
+        
+        # Chuyển set thành số lượng
+        subject_periods_per_week_count = {
+            subject: len(slots) for subject, slots in subject_periods_per_week.items()
+        }
+        
+        # Tìm lesson_index nhỏ nhất cho mỗi môn (để tính offset)
+        subject_min_lesson_index = {}
+        for tp in teaching_programs:
+            if tp.subject_name not in subject_min_lesson_index:
+                subject_min_lesson_index[tp.subject_name] = tp.lesson_index
+            else:
+                subject_min_lesson_index[tp.subject_name] = min(
+                    subject_min_lesson_index[tp.subject_name], tp.lesson_index
+                )
+        
         lesson_counter = defaultdict(lambda: defaultdict(int))
         
         moved_lessons = []
@@ -604,7 +629,16 @@ class ExportService:
                     timetable = timetable_map[(day_idx, period)]
                     subject = timetable.subject_name
                     lesson_counter[subject][week_number] += 1
-                    lesson_index = lesson_counter[subject][week_number]
+                    
+                    # Tính lesson_index: (tuần - 1) * số tiết/tuần + số tiết trong tuần
+                    periods_per_week = subject_periods_per_week_count.get(subject, 5)
+                    lesson_index = (week_number - 1) * periods_per_week + lesson_counter[subject][week_number]
+                    
+                    # Nếu môn có offset (lesson_index nhỏ nhất > 1), cộng thêm offset
+                    min_index = subject_min_lesson_index.get(subject, 1)
+                    if min_index > 1:
+                        lesson_index = lesson_index + (min_index - 1)
+                    
                     lesson_name = subject_lesson_map.get((subject, lesson_index), "")
                     data.append(
                         [

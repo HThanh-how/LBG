@@ -34,9 +34,16 @@ class WeeklyReportService:
         log_map = self._build_log_map(weekly_logs)
         
         # Tính số tiết mỗi tuần cho mỗi môn (dựa trên TKB)
-        subject_periods_per_week = defaultdict(int)
+        # Chỉ đếm các slot (day_of_week, period_index) duy nhất cho mỗi môn
+        subject_periods_per_week = defaultdict(set)
         for t in timetables:
-            subject_periods_per_week[t.subject_name] += 1
+            # Dùng set để tránh đếm trùng (nếu có nhiều lớp cùng môn cùng slot)
+            subject_periods_per_week[t.subject_name].add((t.day_of_week, t.period_index))
+        
+        # Chuyển set thành số lượng
+        subject_periods_per_week_count = {
+            subject: len(slots) for subject, slots in subject_periods_per_week.items()
+        }
         
         # Tìm lesson_index nhỏ nhất cho mỗi môn (để tính offset)
         subject_min_lesson_index = {}
@@ -71,7 +78,7 @@ class WeeklyReportService:
                     lesson_counter[subject][week_number] += 1
                     
                     # Tính lesson_index: (tuần - 1) * số tiết/tuần + số tiết trong tuần
-                    periods_per_week = subject_periods_per_week.get(subject, 5)
+                    periods_per_week = subject_periods_per_week_count.get(subject, 5)
                     lesson_index = (week_number - 1) * periods_per_week + lesson_counter[subject][week_number]
                     
                     # Nếu môn có offset (lesson_index nhỏ nhất > 1), cộng thêm offset
@@ -147,15 +154,27 @@ class WeeklyReportService:
         }
     
     def _find_timetable(self, timetables, day_of_week: int, period_index: int):
-        return next(
-            (
-                t
-                for t in timetables
-                if t.day_of_week == day_of_week
-                and t.period_index == period_index
-            ),
-            None,
-        )
+        # Tìm timetable cho slot này
+        # Nếu có nhiều timetable (nhiều lớp), chỉ lấy 1 cái đầu tiên
+        # Để tránh trùng lặp, có thể group theo subject_name và lấy 1
+        matching = [
+            t
+            for t in timetables
+            if t.day_of_week == day_of_week
+            and t.period_index == period_index
+        ]
+        if not matching:
+            return None
+        
+        # Nếu có nhiều timetable cho cùng slot, chỉ lấy 1 cái (theo subject_name đầu tiên)
+        # Group theo subject_name và lấy subject đầu tiên
+        subjects = {}
+        for t in matching:
+            if t.subject_name not in subjects:
+                subjects[t.subject_name] = t
+        
+        # Trả về timetable đầu tiên (có thể có nhiều lớp cùng môn)
+        return matching[0]
     
     def get_data_for_export(
         self, user: User, week_number: int

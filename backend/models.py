@@ -95,3 +95,20 @@ class Holiday(Base):
     is_even_day = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="holidays")
+
+
+class ImportProgress(Base):
+    __tablename__ = "import_progress"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    table_index = Column(Integer, nullable=False)  # Bảng đang xử lý
+    row_index = Column(Integer, nullable=False)  # Hàng đang xử lý
+    subject_name = Column(String, nullable=True)  # Môn học đang xử lý
+    lesson_counter = Column(Integer, default=0)  # Số tiết đã import cho môn này
+    status = Column(String, default="in_progress")  # in_progress, completed, error
+    created_at = Column(Date, nullable=True)
+    updated_at = Column(Date, nullable=True)
+    
+    user = relationship("User")

@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 seconds timeout
 })
 
 api.interceptors.request.use((config) => {
@@ -138,6 +139,10 @@ export const weeklyReportAPI = {
   saveWeeklyReport: async (weekNumber: number, logs: any[], classId?: number) => {
     const data = classId ? { logs, class_id: classId } : { logs }
     const response = await api.post(`${API_V1_PREFIX}/weekly-report/${weekNumber}/save`, data)
+    return response.data
+  },
+  getLessonsBySubject: async (subjectName: string) => {
+    const response = await api.get(`${API_V1_PREFIX}/weekly-report/lessons/${encodeURIComponent(subjectName)}`)
     return response.data
   },
   exportPDF: async (weekNumber: number, classId?: number) => {

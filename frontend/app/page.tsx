@@ -20,7 +20,16 @@ export default function Home() {
         setToken('bypass_token')
         router.push('/dashboard')
       } catch (error) {
+        console.error('Error getting user:', error)
         // Nếu có lỗi, vẫn vào dashboard (backend đã bypass auth)
+        // Tạo user mặc định
+        setUser({
+          id: 1,
+          username: 'default',
+          full_name: 'Default User',
+          school_name: 'Default School'
+        })
+        setToken('bypass_token')
         router.push('/dashboard')
       }
     }
