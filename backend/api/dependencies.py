@@ -12,8 +12,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 async def get_current_user(
-    # token: str = Depends(oauth2_scheme),  # Tạm thời tắt authentication
     db: Session = Depends(get_db),
+    # token: str = Depends(oauth2_scheme),  # TẠM THỜI TẮT AUTHENTICATION
 ):
     # TẠM THỜI TẮT AUTHENTICATION - Bypass token check
     # try:

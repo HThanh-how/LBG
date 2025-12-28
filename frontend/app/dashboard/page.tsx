@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
-import { uploadAPI, weeklyReportAPI, templateAPI } from '@/lib/api'
+import { uploadAPI, weeklyReportAPI, templateAPI, authAPI } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { WeeklyReportTable } from '@/components/WeeklyReportTable'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, token, logout } = useAuthStore()
+  const { user, token, logout, setUser, setToken } = useAuthStore()
   const [reportData, setReportData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1])
@@ -37,16 +37,26 @@ export default function DashboardPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>('')
 
   useEffect(() => {
-    if (!token) {
-      router.push('/login')
-      return
+    // TẠM THỜI TẮT AUTHENTICATION - Bỏ qua check token
+    // Tự động lấy user nếu chưa có
+    if (!user) {
+      authAPI.getCurrentUser().then(userData => {
+        setUser(userData)
+        if (!token) {
+          setToken('bypass_token')
+        }
+      }).catch(() => {
+        // Ignore error, backend sẽ tự động trả về user
+      })
     }
     // Chỉ load tuần đang active và các tuần xung quanh để tối ưu
     loadActiveWeek()
-  }, [activeTab, token])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   useEffect(() => {
-    if (!token) return
+    // TẠM THỜI TẮT AUTHENTICATION - Bỏ qua check token
+    // if (!token) return
     // Load tuần đầu tiên khi mount
     if (activeTab && !weekDataMap[activeTab]) {
       loadWeeklyReport(activeTab)
@@ -68,7 +78,9 @@ export default function DashboardPage() {
   }
 
   const loadActiveWeek = async () => {
-    if (!token || !activeTab) return
+    // TẠM THỜI TẮT AUTHENTICATION - Bỏ qua check token
+    // if (!token || !activeTab) return
+    if (!activeTab) return
     if (weekDataMap[activeTab]) {
       setReportData(weekDataMap[activeTab])
       return
@@ -86,7 +98,8 @@ export default function DashboardPage() {
   }
 
   const loadWeeklyReport = async (week: number) => {
-    if (!token) return
+    // TẠM THỜI TẮT AUTHENTICATION - Bỏ qua check token
+    // if (!token) return
     try {
       const data = await weeklyReportAPI.getWeeklyReport(week)
       setWeekDataMap(prev => ({ ...prev, [week]: data }))

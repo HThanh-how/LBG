@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 import { authAPI } from '@/lib/api'
@@ -10,6 +10,22 @@ import { Input } from '@/components/ui/input'
 export default function LoginPage() {
   const router = useRouter()
   const { setUser, setToken } = useAuthStore()
+  
+  // TẠM THỜI TẮT AUTHENTICATION - Tự động redirect đến dashboard
+  useEffect(() => {
+    const autoLogin = async () => {
+      try {
+        const userData = await authAPI.getCurrentUser()
+        setUser(userData)
+        setToken('bypass_token')
+        router.push('/dashboard')
+      } catch (error) {
+        // Vẫn vào dashboard nếu có lỗi
+        router.push('/dashboard')
+      }
+    }
+    autoLogin()
+  }, [router, setUser, setToken])
   const [isLogin, setIsLogin] = useState(true)
   const [formData, setFormData] = useState({
     username: '',
