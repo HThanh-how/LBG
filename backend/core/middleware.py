@@ -65,3 +65,4 @@ class ExceptionHandlingMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Internal server error", "error_type": "InternalServerError"},
             )
 
+

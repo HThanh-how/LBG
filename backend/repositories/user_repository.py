@@ -52,3 +52,4 @@ class UserRepository:
         logger.info("User deleted", user_id=user_id)
         return True
 
+

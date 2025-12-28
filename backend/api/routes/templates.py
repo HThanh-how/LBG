@@ -1,7 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 import xlsxwriter
 from io import BytesIO
+
+from api.dependencies import get_current_user, get_db
+from models import User
 
 router = APIRouter(prefix="/templates", tags=["Templates"])
 
@@ -27,16 +31,18 @@ def download_tkb_template():
         "border": 1,
     })
     
-    worksheet.set_column("A:A", 15)
+    worksheet.set_column("A:A", 12)
     worksheet.set_column("B:F", 20)
     
-    headers = ["Thứ", "Tiết 1", "Tiết 2", "Tiết 3", "Tiết 4", "Tiết 5"]
+    # Header row: Tiết, Thứ 2, Thứ 3, Thứ 4, Thứ 5, Thứ 6
+    headers = ["Tiết", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"]
     for col, header in enumerate(headers):
         worksheet.write(0, col, header, header_format)
     
-    days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"]
-    for row, day in enumerate(days, start=1):
-        worksheet.write(row, 0, day, cell_format)
+    # Data rows: Tiết 1, Tiết 2, Tiết 3, Tiết 4, Tiết 5
+    periods = ["Tiết 1", "Tiết 2", "Tiết 3", "Tiết 4", "Tiết 5"]
+    for row, period in enumerate(periods, start=1):
+        worksheet.write(row, 0, period, cell_format)
         for col in range(1, 6):
             worksheet.write(row, col, "", cell_format)
     

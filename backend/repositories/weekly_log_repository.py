@@ -47,3 +47,4 @@ class WeeklyLogRepository:
         logger.info("Weekly logs created", count=len(db_logs))
         return db_logs
 
+

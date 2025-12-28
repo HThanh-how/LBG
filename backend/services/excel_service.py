@@ -39,21 +39,27 @@ class ExcelService:
             records_count = 0
             
             for _, row in df.iterrows():
-                day_str = str(row.get("Thứ", "")).strip()
-                day_of_week = day_mapping.get(day_str)
+                period_str = str(row.get("Tiết", "")).strip()
                 
-                if not day_of_week:
+                if not period_str or not period_str.startswith("Tiết"):
                     continue
                 
-                for period in range(1, 6):
-                    period_col = f"Tiết {period}"
-                    subject = str(row.get(period_col, "")).strip()
+                try:
+                    period_index = int(period_str.replace("Tiết", "").strip())
+                except (ValueError, AttributeError):
+                    continue
+                
+                if period_index < 1 or period_index > 5:
+                    continue
+                
+                for day_name, day_of_week in day_mapping.items():
+                    subject = str(row.get(day_name, "")).strip()
                     
                     if subject and subject.lower() not in ["", "nan", "none"]:
                         timetables.append({
                             "user_id": user_id,
                             "day_of_week": day_of_week,
-                            "period_index": period,
+                            "period_index": period_index,
                             "subject_name": subject,
                         })
                         records_count += 1

@@ -189,7 +189,15 @@ export const holidayAPI = {
     const response = await api.get(`${API_V1_PREFIX}/holidays`)
     return response.data
   },
-  createHoliday: async (data: { holiday_date: string; holiday_name: string }) => {
+  createHoliday: async (data: {
+    holiday_date?: string
+    holiday_name: string
+    week_number?: number
+    start_date?: string
+    end_date?: string
+    is_odd_day?: number
+    is_even_day?: number
+  }) => {
     const response = await api.post(`${API_V1_PREFIX}/holidays`, data)
     return response.data
   },

@@ -147,3 +147,4 @@ Sử dụng FastAPI's Depends để inject dependencies, dễ dàng mock trong t
 3. **Structured Logs**: Dễ dàng parse và analyze
 4. **Error Tracking**: Comprehensive error logging
 
+

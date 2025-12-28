@@ -39,3 +39,4 @@ class TimetableRepository:
         logger.info("Timetables created", count=len(db_timetables))
         return db_timetables
 
+

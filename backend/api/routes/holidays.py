@@ -45,17 +45,33 @@ def create_holiday(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    holiday_date = datetime.strptime(holiday_data.holiday_date, "%Y-%m-%d").date()
+    holiday_date = None
+    if holiday_data.holiday_date:
+        holiday_date = datetime.strptime(holiday_data.holiday_date, "%Y-%m-%d").date()
+    
     moved_to_date = None
     if holiday_data.moved_to_date:
         moved_to_date = datetime.strptime(holiday_data.moved_to_date, "%Y-%m-%d").date()
     
+    start_date = None
+    if holiday_data.start_date:
+        start_date = datetime.strptime(holiday_data.start_date, "%Y-%m-%d").date()
+    
+    end_date = None
+    if holiday_data.end_date:
+        end_date = datetime.strptime(holiday_data.end_date, "%Y-%m-%d").date()
+    
     new_holiday = Holiday(
         user_id=current_user.id,
-        holiday_date=holiday_date,
+        holiday_date=holiday_date or (start_date if start_date else datetime.now().date()),
         holiday_name=holiday_data.holiday_name,
         is_moved=holiday_data.is_moved,
         moved_to_date=moved_to_date,
+        week_number=holiday_data.week_number,
+        start_date=start_date,
+        end_date=end_date,
+        is_odd_day=holiday_data.is_odd_day,
+        is_even_day=holiday_data.is_even_day,
     )
     db.add(new_holiday)
     db.commit()

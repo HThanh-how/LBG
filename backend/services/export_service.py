@@ -412,13 +412,41 @@ class ExportService:
         
         holiday_map = {}
         if holidays:
-            for holiday in holidays:
-                holiday_date = holiday.holiday_date
-                if isinstance(holiday_date, date):
-                    if week_start_date <= holiday_date <= week_end_date:
-                        day_of_week = holiday_date.weekday() + 1
-                        if day_of_week >= 2 and day_of_week <= 6:
-                            holiday_map[day_of_week] = holiday
+            for day_idx, day in enumerate(days, start=2):
+                day_offset = day_idx - 2
+                day_date_obj = week_start + timedelta(days=day_offset)
+                day_date = day_date_obj.date() if hasattr(day_date_obj, 'date') else day_date_obj
+                
+                for holiday in holidays:
+                    # Kiểm tra nghỉ theo tuần
+                    if holiday.week_number and holiday.week_number != week_number:
+                        continue
+                    
+                    # Kiểm tra nghỉ theo khoảng ngày
+                    if holiday.start_date and holiday.end_date:
+                        if not (holiday.start_date <= day_date <= holiday.end_date):
+                            continue
+                        # Nghỉ theo khoảng ngày - áp dụng cho tất cả ngày trong khoảng
+                        if holiday.start_date <= day_date <= holiday.end_date:
+                            # Kiểm tra nghỉ theo ngày lẻ/chẵn
+                            if holiday.is_odd_day and day_date.day % 2 == 0:
+                                continue
+                            if holiday.is_even_day and day_date.day % 2 == 1:
+                                continue
+                            holiday_map[day_idx] = holiday
+                            break
+                    # Kiểm tra nghỉ theo ngày cụ thể
+                    elif holiday.holiday_date:
+                        holiday_date = holiday.holiday_date
+                        if isinstance(holiday_date, date):
+                            if day_date == holiday_date:
+                                # Kiểm tra nghỉ theo ngày lẻ/chẵn
+                                if holiday.is_odd_day and day_date.day % 2 == 0:
+                                    continue
+                                if holiday.is_even_day and day_date.day % 2 == 1:
+                                    continue
+                                holiday_map[day_idx] = holiday
+                                break
         
         data = [["Thứ", "Tiết", "Môn học", "Tên bài dạy", "Lồng ghép"]]
         lesson_counter = defaultdict(lambda: defaultdict(int))
@@ -429,11 +457,39 @@ class ExportService:
             day_offset = day_idx - 2
             day_date_obj = week_start + timedelta(days=day_offset)
             day_date = day_date_obj.date() if hasattr(day_date_obj, 'date') else day_date_obj
-            is_holiday = day_idx in holiday_map
+            
+            # Kiểm tra xem ngày này có phải nghỉ lễ không
+            is_holiday = False
+            holiday = None
+            for h in holidays:
+                # Kiểm tra nghỉ theo tuần
+                if h.week_number and h.week_number != week_number:
+                    continue
+                
+                # Kiểm tra nghỉ theo khoảng ngày
+                if h.start_date and h.end_date:
+                    if h.start_date <= day_date <= h.end_date:
+                        # Kiểm tra nghỉ theo ngày lẻ/chẵn
+                        if h.is_odd_day and day_date.day % 2 == 0:
+                            continue
+                        if h.is_even_day and day_date.day % 2 == 1:
+                            continue
+                        is_holiday = True
+                        holiday = h
+                        break
+                # Kiểm tra nghỉ theo ngày cụ thể
+                elif h.holiday_date and h.holiday_date == day_date:
+                    # Kiểm tra nghỉ theo ngày lẻ/chẵn
+                    if h.is_odd_day and day_date.day % 2 == 0:
+                        continue
+                    if h.is_even_day and day_date.day % 2 == 1:
+                        continue
+                    is_holiday = True
+                    holiday = h
+                    break
             
             for period in periods:
-                if is_holiday:
-                    holiday = holiday_map[day_idx]
+                if is_holiday and holiday:
                     if holiday.is_moved and holiday.moved_to_date:
                         moved_lessons.append({
                             "day": day_idx,

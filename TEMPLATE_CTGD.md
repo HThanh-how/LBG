@@ -21,3 +21,4 @@ File Excel CTGD cần có định dạng như sau:
 - Hệ thống sẽ tự động khớp: Môn học + Tiết thứ trong năm = Tên bài
 - Lưu file dưới định dạng .xlsx hoặc .xls
 
+

@@ -25,6 +25,14 @@ export default function DashboardPage() {
   })
   const [endWeek, setEndWeek] = useState(54)
   const [holidayWeeks, setHolidayWeeks] = useState<number[]>([])
+  const [holidayConfigs, setHolidayConfigs] = useState<Array<{
+    weekNumber?: number
+    startDate?: string
+    endDate?: string
+    isOddDay?: boolean
+    isEvenDay?: boolean
+    holidayName: string
+  }>>([])
   const [subjects, setSubjects] = useState<string[]>([])
   const [selectedSubject, setSelectedSubject] = useState<string>('')
 
@@ -168,17 +176,55 @@ export default function DashboardPage() {
     }
   }
 
-  const handleApplyWeekConfig = () => {
+  const handleApplyWeekConfig = async () => {
     if (!startDate) {
       alert('Vui lòng chọn ngày bắt đầu')
       return
     }
+    
+    // Lưu cấu hình nghỉ lễ vào backend
+    try {
+      const { holidayAPI } = await import('@/lib/api')
+      
+      // Tạo các nghỉ lễ mới
+      for (const config of holidayConfigs) {
+        if (config.holidayName) {
+          if (config.startDate && config.endDate) {
+            // Nghỉ theo khoảng ngày
+              await holidayAPI.createHoliday({
+                holiday_name: config.holidayName,
+                start_date: config.startDate,
+                end_date: config.endDate,
+                is_odd_day: config.isOddDay ? 1 : undefined,
+                is_even_day: config.isEvenDay ? 1 : undefined,
+              })
+          } else if (config.weekNumber) {
+            // Nghỉ theo tuần
+            await holidayAPI.createHoliday({
+              holiday_name: config.holidayName,
+              week_number: config.weekNumber,
+              is_odd_day: config.isOddDay ? 1 : undefined,
+              is_even_day: config.isEvenDay ? 1 : undefined,
+            })
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error saving holiday config:', err)
+      alert('Có lỗi khi lưu cấu hình nghỉ lễ: ' + (err as any).message)
+    }
+    
+    // Tính toán tuần dựa trên nghỉ lễ
     const weeks: number[] = []
     for (let i = 1; i <= endWeek; i++) {
-      if (!holidayWeeks.includes(i)) {
+      const shouldExclude = holidayConfigs.some(config => 
+        config.weekNumber === i
+      )
+      if (!shouldExclude) {
         weeks.push(i)
       }
     }
+    
     setSelectedWeeks(weeks)
     if (weeks.length > 0) {
       setActiveTab(weeks[0])
@@ -301,7 +347,14 @@ export default function DashboardPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => templateAPI.downloadTKB()}
+                  onClick={async () => {
+                    try {
+                      await templateAPI.downloadTKB()
+                    } catch (err: any) {
+                      console.error('Error downloading TKB template:', err)
+                      alert('Có lỗi xảy ra khi tải mẫu TKB: ' + (err.message || 'Unknown error'))
+                    }
+                  }}
                   className="text-xs"
                 >
                   Tải mẫu
@@ -340,9 +393,14 @@ export default function DashboardPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedSubject) {
-                      templateAPI.downloadCTGD(selectedSubject)
+                      try {
+                        await templateAPI.downloadCTGD(selectedSubject)
+                      } catch (err: any) {
+                        console.error('Error downloading CTGD template:', err)
+                        alert('Có lỗi xảy ra khi tải mẫu CTGD: ' + (err.message || 'Unknown error'))
+                      }
                     } else {
                       alert('Vui lòng chọn môn học hoặc upload TKB trước')
                     }
@@ -532,23 +590,118 @@ export default function DashboardPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Nghỉ quãng (Tết âm lịch) - Nhập các tuần nghỉ, cách nhau bằng dấu phẩy:
+                    Cấu hình nghỉ lễ:
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: 5,6,7,8"
-                    value={holidayWeeks.join(',')}
-                    onChange={(e) => {
-                      const weeks = e.target.value
-                        .split(',')
-                        .map(w => parseInt(w.trim()))
-                        .filter(w => !isNaN(w) && w >= 1 && w <= 54)
-                      setHolidayWeeks(weeks)
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400"
-                  />
+                  <div className="space-y-3 max-h-60 overflow-y-auto border border-gray-200 rounded p-3">
+                    {holidayConfigs.map((config, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded border">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sm font-medium">Nghỉ lễ {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHolidayConfigs(holidayConfigs.filter((_, i) => i !== index))
+                            }}
+                            className="text-red-500 text-xs hover:text-red-700"
+                          >
+                            × Xóa
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Tên nghỉ lễ (ví dụ: Tết Nguyên Đán)"
+                            value={config.holidayName}
+                            onChange={(e) => {
+                              const newConfigs = [...holidayConfigs]
+                              newConfigs[index].holidayName = e.target.value
+                              setHolidayConfigs(newConfigs)
+                            }}
+                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-600">Tuần (tùy chọn):</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="54"
+                                placeholder="VD: 5"
+                                value={config.weekNumber || ''}
+                                onChange={(e) => {
+                                  const newConfigs = [...holidayConfigs]
+                                  newConfigs[index].weekNumber = e.target.value ? parseInt(e.target.value) : undefined
+                                  setHolidayConfigs(newConfigs)
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600">Từ ngày:</label>
+                              <input
+                                type="date"
+                                value={config.startDate || ''}
+                                onChange={(e) => {
+                                  const newConfigs = [...holidayConfigs]
+                                  newConfigs[index].startDate = e.target.value
+                                  setHolidayConfigs(newConfigs)
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600">Đến ngày:</label>
+                              <input
+                                type="date"
+                                value={config.endDate || ''}
+                                onChange={(e) => {
+                                  const newConfigs = [...holidayConfigs]
+                                  newConfigs[index].endDate = e.target.value
+                                  setHolidayConfigs(newConfigs)
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600">Loại ngày:</label>
+                              <select
+                                value={config.isOddDay ? 'odd' : config.isEvenDay ? 'even' : 'all'}
+                                onChange={(e) => {
+                                  const newConfigs = [...holidayConfigs]
+                                  newConfigs[index].isOddDay = e.target.value === 'odd'
+                                  newConfigs[index].isEvenDay = e.target.value === 'even'
+                                  setHolidayConfigs(newConfigs)
+                                }}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900"
+                              >
+                                <option value="all">Tất cả</option>
+                                <option value="odd">Ngày lẻ</option>
+                                <option value="even">Ngày chẵn</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHolidayConfigs([...holidayConfigs, {
+                          holidayName: '',
+                          weekNumber: undefined,
+                          startDate: undefined,
+                          endDate: undefined,
+                          isOddDay: false,
+                          isEvenDay: false,
+                        }])
+                      }}
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50"
+                    >
+                      + Thêm nghỉ lễ
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Các tuần nghỉ sẽ không được thêm vào danh sách
+                    Có thể cấu hình nghỉ theo tuần, theo khoảng ngày, hoặc theo ngày lẻ/chẵn
                   </p>
                 </div>
 

@@ -86,10 +86,15 @@ class ClassResponse(ClassBase):
 
 
 class HolidayBase(BaseModel):
-    holiday_date: str
+    holiday_date: Optional[str] = None
     holiday_name: str
     is_moved: int = 0
     moved_to_date: Optional[str] = None
+    week_number: Optional[int] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    is_odd_day: Optional[int] = None
+    is_even_day: Optional[int] = None
 
 
 class HolidayCreate(HolidayBase):
@@ -99,7 +104,7 @@ class HolidayCreate(HolidayBase):
 class HolidayResponse(HolidayBase):
     id: int
     user_id: int
-    
+
     class Config:
         from_attributes = True
 

@@ -21,3 +21,4 @@ def validate_week_number(week_number: int) -> None:
     if week_number < 1 or week_number > 40:
         raise BadRequestException("Week number must be between 1 and 40")
 
+

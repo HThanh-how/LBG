@@ -79,12 +79,17 @@ class WeeklyLog(Base):
 
 class Holiday(Base):
     __tablename__ = "holidays"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    holiday_date = Column(Date, nullable=False)
+    holiday_date = Column(Date, nullable=True)
     holiday_name = Column(String, nullable=False)
     is_moved = Column(Integer, default=0)
     moved_to_date = Column(Date, nullable=True)
-    
+    week_number = Column(Integer, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    is_odd_day = Column(Integer, nullable=True)
+    is_even_day = Column(Integer, nullable=True)
+
     user = relationship("User", back_populates="holidays")

@@ -73,3 +73,4 @@ def create_default_holidays(db, user_id: int, year: int = None):
     
     return len(new_holidays)
 
+

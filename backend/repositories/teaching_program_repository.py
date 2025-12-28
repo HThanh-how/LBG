@@ -47,3 +47,4 @@ class TeachingProgramRepository:
         logger.info("Teaching programs created", count=len(db_programs))
         return db_programs
 
+
