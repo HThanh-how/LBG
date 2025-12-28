@@ -33,6 +33,21 @@ class WeeklyReportService:
         subject_lesson_map = self._build_lesson_map(teaching_programs)
         log_map = self._build_log_map(weekly_logs)
         
+        # Tính số tiết mỗi tuần cho mỗi môn (dựa trên TKB)
+        subject_periods_per_week = defaultdict(int)
+        for t in timetables:
+            subject_periods_per_week[t.subject_name] += 1
+        
+        # Tìm lesson_index nhỏ nhất cho mỗi môn (để tính offset)
+        subject_min_lesson_index = {}
+        for tp in teaching_programs:
+            if tp.subject_name not in subject_min_lesson_index:
+                subject_min_lesson_index[tp.subject_name] = tp.lesson_index
+            else:
+                subject_min_lesson_index[tp.subject_name] = min(
+                    subject_min_lesson_index[tp.subject_name], tp.lesson_index
+                )
+        
         report_data = []
         lesson_counter = defaultdict(lambda: defaultdict(int))
         
@@ -54,7 +69,15 @@ class WeeklyReportService:
                 elif timetable:
                     subject = timetable.subject_name
                     lesson_counter[subject][week_number] += 1
-                    lesson_index = lesson_counter[subject][week_number]
+                    
+                    # Tính lesson_index: (tuần - 1) * số tiết/tuần + số tiết trong tuần
+                    periods_per_week = subject_periods_per_week.get(subject, 5)
+                    lesson_index = (week_number - 1) * periods_per_week + lesson_counter[subject][week_number]
+                    
+                    # Nếu môn có offset (lesson_index nhỏ nhất > 1), cộng thêm offset
+                    min_index = subject_min_lesson_index.get(subject, 1)
+                    if min_index > 1:
+                        lesson_index = lesson_index + (min_index - 1)
                     
                     lesson_name = subject_lesson_map.get(
                         (subject, lesson_index), ""

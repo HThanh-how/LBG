@@ -447,6 +447,25 @@ export default function DashboardPage() {
                 Tổng số tuần: {selectedWeeks.length}
               </div>
               <Button
+                onClick={() => {
+                  // Thêm tuần mới (tuần tiếp theo sau tuần lớn nhất)
+                  const maxWeek = selectedWeeks.length > 0 ? Math.max(...selectedWeeks) : 0
+                  const newWeek = maxWeek + 1
+                  if (!selectedWeeks.includes(newWeek)) {
+                    // Thêm vào cuối và sort để đảm bảo thứ tự
+                    const newWeeks = [...selectedWeeks, newWeek].sort((a, b) => a - b)
+                    setSelectedWeeks(newWeeks)
+                    setActiveTab(newWeek)
+                    loadWeeklyReport(newWeek)
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                + Thêm tuần
+              </Button>
+              <Button
                 onClick={() => setShowWeekConfig(true)}
                 variant="outline"
                 size="sm"
@@ -475,7 +494,7 @@ export default function DashboardPage() {
                   const startWeek = Math.min(...selectedWeeks)
                   const endWeek = Math.max(...selectedWeeks)
                   try {
-                    await weeklyReportAPI.exportAllWeeks(startWeek, endWeek)
+                    await weeklyReportAPI.previewAllWeeks(startWeek, endWeek)
                   } catch (err) {
                     alert('Có lỗi xảy ra khi preview')
                   }

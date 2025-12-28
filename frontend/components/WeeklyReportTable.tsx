@@ -168,6 +168,31 @@ export function WeeklyReportTable({ data, weekNumber, onSave }: WeeklyReportTabl
     getCoreRowModel: getCoreRowModel(),
   })
 
+  // Tính toán rowspan cho mỗi ngày
+  const getRowSpan = (rowIndex: number) => {
+    const currentDay = editableData[rowIndex]?.day_of_week
+    if (!currentDay) return 1
+    
+    let count = 1
+    // Đếm số hàng liên tiếp có cùng ngày
+    for (let i = rowIndex + 1; i < editableData.length; i++) {
+      if (editableData[i]?.day_of_week === currentDay) {
+        count++
+      } else {
+        break
+      }
+    }
+    return count
+  }
+
+  // Kiểm tra xem có phải là hàng đầu tiên của ngày không
+  const isFirstRowOfDay = (rowIndex: number) => {
+    if (rowIndex === 0) return true
+    const currentDay = editableData[rowIndex]?.day_of_week
+    const prevDay = editableData[rowIndex - 1]?.day_of_week
+    return currentDay !== prevDay
+  }
+
   const handleSave = () => {
     const logs = editableData
       .filter((row) => row.subject_name && row.lesson_name)
@@ -203,15 +228,39 @@ export function WeeklyReportTable({ data, weekNumber, onSave }: WeeklyReportTabl
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="border border-gray-300 px-4 py-2">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {table.getRowModel().rows.map((row, rowIndex) => {
+              const isFirstRow = isFirstRowOfDay(rowIndex)
+              const rowSpan = isFirstRow ? getRowSpan(rowIndex) : 0
+              
+              return (
+                <tr key={row.id} className="hover:bg-gray-50">
+                  {row.getVisibleCells().map((cell, cellIndex) => {
+                    // Cột đầu tiên (Thứ) - chỉ hiển thị ở hàng đầu tiên của mỗi ngày
+                    if (cellIndex === 0) {
+                      if (isFirstRow) {
+                        return (
+                          <td
+                            key={cell.id}
+                            rowSpan={rowSpan}
+                            className="border border-gray-300 px-4 py-2 align-middle text-center font-medium"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        )
+                      }
+                      return null // Không render cell cho các hàng tiếp theo
+                    }
+                    
+                    // Các cột khác - render bình thường
+                    return (
+                      <td key={cell.id} className="border border-gray-300 px-4 py-2">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

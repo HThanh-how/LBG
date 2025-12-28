@@ -10,9 +10,10 @@ import os
 from collections import defaultdict
 from typing import List, Optional
 
-from models import User, Timetable, TeachingProgram, WeeklyLog, Holiday
+from models import User, Timetable, TeachingProgram, WeeklyLog, Holiday, Class
 from core.logging_config import get_logger
 from utils.date_utils import get_week_dates, format_vietnamese_date
+from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 
@@ -183,6 +184,8 @@ class ExportService:
         weekly_logs: List[WeeklyLog],
         week_number: int,
         holidays: Optional[List[Holiday]] = None,
+        class_id: Optional[int] = None,
+        db: Optional[Session] = None,
     ) -> str:
         filename = f"{self.output_dir}/bao_giang_tuan_{week_number}_user_{user.id}.xlsx"
         workbook = xlsxwriter.Workbook(filename)
@@ -240,35 +243,85 @@ class ExportService:
         
         row_idx = 3
         current_day = None
+        day_start_row = None  # Lưu vị trí bắt đầu của mỗi ngày để merge
+        
         for row in data[1:]:
-            day_name = row[0]
+            day_name = row[0] if row[0] else ""
+            
+            # Kiểm tra nếu là ngày mới (có day_name và khác ngày hiện tại)
             if day_name and day_name != current_day:
+                # Nếu có ngày trước đó, merge cells cho cột ngày
+                if current_day is not None and day_start_row is not None and row_idx > day_start_row:
+                    # Merge cells từ row đầu đến row cuối của ngày trước
+                    worksheet.merge_range(
+                        day_start_row, 0, row_idx - 1, 0,
+                        "", cell_format
+                    )
+                    # Ghi lại text vào cell đầu tiên sau khi merge
+                    day_offset = int(current_day.split()[1]) - 2
+                    day_date = week_start + timedelta(days=day_offset)
+                    day_display = f"{current_day}\n{day_date.strftime('%d/%m/%Y')}"
+                    worksheet.write(day_start_row, 0, day_display, cell_format)
+                
+                # Bắt đầu ngày mới
                 current_day = day_name
+                day_start_row = row_idx
                 day_offset = int(day_name.split()[1]) - 2
                 day_date = week_start + timedelta(days=day_offset)
                 day_display = f"{day_name}\n{day_date.strftime('%d/%m/%Y')}"
-            else:
-                day_display = ""
+                # Ghi day_name vào row đầu tiên của ngày mới
+                worksheet.write(row_idx, 0, day_display, cell_format)
+            # Nếu không có day_name (tiết 2, 3, 4, 5 của cùng ngày), không ghi gì vào cột ngày
             
             subject_code = row[2] if len(row) > 2 else ""
             lesson_name = row[3] if len(row) > 3 else ""
             lesson_display = f"{subject_code} - {lesson_name}" if subject_code else lesson_name
             
-            worksheet.write(row_idx, 0, day_display, cell_format)
+            # Ghi các cột khác (TIẾT, TÊN BÀI DẠY, Lồng ghép)
             worksheet.write(row_idx, 1, row[1], cell_format)
             worksheet.write(row_idx, 2, lesson_display, cell_format_left)
             worksheet.write(row_idx, 3, row[4] if len(row) > 4 else "", cell_format_left)
             row_idx += 1
         
+        # Merge cells cho ngày cuối cùng (nếu có)
+        if current_day is not None and day_start_row is not None and row_idx > day_start_row:
+            periods_count = row_idx - day_start_row
+            if periods_count > 1:
+                worksheet.merge_range(
+                    day_start_row, 0, row_idx - 1, 0,
+                    "", cell_format
+                )
+                # Ghi lại text vào cell đầu tiên sau khi merge
+                day_offset = int(current_day.split()[1]) - 2
+                day_date = week_start + timedelta(days=day_offset)
+                day_display = f"{current_day}\n{day_date.strftime('%d/%m/%Y')}"
+                worksheet.write(day_start_row, 0, day_display, cell_format)
+        
+        # Lấy thông tin class nếu có
+        reviewer_name = None
+        teacher_name = user.full_name  # Mặc định là tên user
+        
+        if class_id and db:
+            class_obj = db.query(Class).filter(Class.id == class_id).first()
+            if class_obj:
+                reviewer_name = class_obj.reviewer_name
+                if class_obj.teacher_name:
+                    teacher_name = class_obj.teacher_name
+        
         signature_row = row_idx + 2
         worksheet.write(signature_row, 0, "Duyệt của Tổ trưởng CM", cell_format_left)
+        if reviewer_name:
+            worksheet.write(signature_row, 1, reviewer_name, cell_format_left)
+        
+        # Lấy ngày hiện tại
+        today = datetime.now()
         worksheet.write(
             signature_row, 2,
-            f"Long Tiên ngày ... tháng ... năm {datetime.now().year}",
+            f"Long Tiên ngày {today.day} tháng {today.month} năm {today.year}",
             cell_format_left
         )
         worksheet.write(signature_row + 1, 2, "GVPT", cell_format_left)
-        worksheet.write(signature_row + 2, 2, user.full_name, cell_format_left)
+        worksheet.write(signature_row + 2, 2, teacher_name, cell_format_left)
         
         workbook.close()
         logger.info("Excel exported", user_id=user.id, week_number=week_number)
@@ -283,6 +336,8 @@ class ExportService:
         start_week: int,
         end_week: int,
         holidays: Optional[List[Holiday]] = None,
+        class_id: Optional[int] = None,
+        db: Optional[Session] = None,
     ) -> str:
         filename = f"{self.output_dir}/bao_giang_tuan_{start_week}_{end_week}_user_{user.id}.xlsx"
         workbook = xlsxwriter.Workbook(filename)
@@ -343,25 +398,59 @@ class ExportService:
             
             row_idx = 3
             current_day = None
+            day_start_row = None  # Lưu vị trí bắt đầu của mỗi ngày để merge
+            
             for row in data[1:]:
-                day_name = row[0]
+                day_name = row[0] if row[0] else ""
+                
+                # Kiểm tra nếu là ngày mới (có day_name và khác ngày hiện tại)
                 if day_name and day_name != current_day:
+                    # Nếu có ngày trước đó, merge cells cho cột ngày
+                    if current_day is not None and day_start_row is not None and row_idx > day_start_row:
+                        # Merge cells từ row đầu đến row cuối của ngày trước
+                        worksheet.merge_range(
+                            day_start_row, 0, row_idx - 1, 0,
+                            "", cell_format
+                        )
+                        # Ghi lại text vào cell đầu tiên sau khi merge
+                        day_offset = int(current_day.split()[1]) - 2
+                        day_date = week_start + timedelta(days=day_offset)
+                        day_display = f"{current_day}\n{day_date.strftime('%d/%m/%Y')}"
+                        worksheet.write(day_start_row, 0, day_display, cell_format)
+                    
+                    # Bắt đầu ngày mới
                     current_day = day_name
+                    day_start_row = row_idx
                     day_offset = int(day_name.split()[1]) - 2
                     day_date = week_start + timedelta(days=day_offset)
                     day_display = f"{day_name}\n{day_date.strftime('%d/%m/%Y')}"
-                else:
-                    day_display = ""
+                    # Ghi day_name vào row đầu tiên của ngày mới
+                    worksheet.write(row_idx, 0, day_display, cell_format)
+                # Nếu không có day_name (tiết 2, 3, 4, 5 của cùng ngày), không ghi gì vào cột ngày
                 
                 subject_code = row[2] if len(row) > 2 else ""
                 lesson_name = row[3] if len(row) > 3 else ""
                 lesson_display = f"{subject_code} - {lesson_name}" if subject_code else lesson_name
                 
-                worksheet.write(row_idx, 0, day_display, cell_format)
+                # Ghi các cột khác (TIẾT, TÊN BÀI DẠY, Lồng ghép)
                 worksheet.write(row_idx, 1, row[1], cell_format)
                 worksheet.write(row_idx, 2, lesson_display, cell_format_left)
                 worksheet.write(row_idx, 3, row[4] if len(row) > 4 else "", cell_format_left)
                 row_idx += 1
+            
+            # Merge cells cho ngày cuối cùng (nếu có)
+            if current_day is not None and day_start_row is not None and row_idx > day_start_row:
+                periods_count = row_idx - day_start_row
+                if periods_count > 1:
+                    worksheet.merge_range(
+                        day_start_row, 0, row_idx - 1, 0,
+                        "", cell_format
+                    )
+                    # Ghi lại text vào cell đầu tiên sau khi merge
+                    day_offset = int(current_day.split()[1]) - 2
+                    day_date = week_start + timedelta(days=day_offset)
+                    day_display = f"{current_day}\n{day_date.strftime('%d/%m/%Y')}"
+                    worksheet.write(day_start_row, 0, day_display, cell_format)
             
             signature_row = row_idx + 2
             worksheet.write(signature_row, 0, "Duyệt của Tổ trưởng CM", cell_format_left)

@@ -27,6 +27,8 @@ class Class(Base):
     class_name = Column(String, nullable=False)
     grade = Column(String)
     school_year = Column(String)
+    reviewer_name = Column(String, nullable=True)  # Tổ trưởng chuyên môn
+    teacher_name = Column(String, nullable=True)  # Giáo viên phụ trách (GVPT)
     
     user = relationship("User", back_populates="classes")
     timetables = relationship("Timetable", back_populates="class_obj")

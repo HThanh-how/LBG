@@ -168,6 +168,18 @@ export const weeklyReportAPI = {
     link.click()
     link.remove()
   },
+  previewAllWeeks: async (startWeek: number, endWeek: number, classId?: number) => {
+    const params = new URLSearchParams({
+      start_week: startWeek.toString(),
+      end_week: endWeek.toString(),
+    })
+    if (classId) {
+      params.append('class_id', classId.toString())
+    }
+    // Mở preview trong tab mới (trả về HTML)
+    const previewUrl = `${API_URL}${API_V1_PREFIX}/weekly-report/preview?${params.toString()}`
+    window.open(previewUrl, '_blank')
+  },
   exportAllWeeks: async (startWeek: number, endWeek: number, classId?: number) => {
     const params = classId ? { class_id: classId } : {}
     const response = await api.get(`${API_V1_PREFIX}/weekly-report/export/all`, {

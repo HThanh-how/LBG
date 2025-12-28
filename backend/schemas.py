@@ -71,10 +71,20 @@ class ClassBase(BaseModel):
     class_name: str
     grade: Optional[str] = None
     school_year: Optional[str] = None
+    reviewer_name: Optional[str] = None  # Tổ trưởng chuyên môn
+    teacher_name: Optional[str] = None  # Giáo viên phụ trách (GVPT)
 
 
 class ClassCreate(ClassBase):
     pass
+
+
+class ClassUpdate(BaseModel):
+    class_name: Optional[str] = None
+    grade: Optional[str] = None
+    school_year: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    teacher_name: Optional[str] = None
 
 
 class ClassResponse(ClassBase):
