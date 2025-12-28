@@ -17,6 +17,9 @@ class UserRepository:
     def get_by_username(self, username: str) -> Optional[User]:
         return self.db.query(User).filter(User.username == username).first()
     
+    def get_first_user(self) -> Optional[User]:
+        return self.db.query(User).first()
+    
     def create(self, user_data: dict) -> User:
         existing_user = self.get_by_username(user_data["username"])
         if existing_user:

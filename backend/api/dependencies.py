@@ -12,21 +12,35 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    # token: str = Depends(oauth2_scheme),  # Tạm thời tắt authentication
     db: Session = Depends(get_db),
 ):
-    try:
-        payload = decode_access_token(token)
-        username: str = payload.get("sub")
-        if username is None:
-            raise UnauthorizedException("Invalid token")
-    except JWTError:
-        raise UnauthorizedException("Could not validate credentials")
+    # TẠM THỜI TẮT AUTHENTICATION - Bypass token check
+    # try:
+    #     payload = decode_access_token(token)
+    #     username: str = payload.get("sub")
+    #     if username is None:
+    #         raise UnauthorizedException("Invalid token")
+    # except JWTError:
+    #     raise UnauthorizedException("Could not validate credentials")
     
     user_repo = UserRepository(db)
-    user = user_repo.get_by_username(username)
+    # Lấy user đầu tiên hoặc tạo user mặc định
+    user = user_repo.get_first_user()
     if user is None:
-        raise UnauthorizedException("User not found")
+        # Tạo user mặc định nếu chưa có
+        from models import User
+        from core.security import get_password_hash
+        default_user = User(
+            username="default",
+            password_hash=get_password_hash("default"),
+            full_name="Default User",
+            school_name="Default School"
+        )
+        db.add(default_user)
+        db.commit()
+        db.refresh(default_user)
+        return default_user
     return user
 
 
