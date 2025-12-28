@@ -67,6 +67,43 @@ class TimetableResponse(TimetableBase):
         from_attributes = True
 
 
+class ClassBase(BaseModel):
+    class_name: str
+    grade: Optional[str] = None
+    school_year: Optional[str] = None
+
+
+class ClassCreate(ClassBase):
+    pass
+
+
+class ClassResponse(ClassBase):
+    id: int
+    user_id: int
+    
+    class Config:
+        from_attributes = True
+
+
+class HolidayBase(BaseModel):
+    holiday_date: str
+    holiday_name: str
+    is_moved: int = 0
+    moved_to_date: Optional[str] = None
+
+
+class HolidayCreate(HolidayBase):
+    pass
+
+
+class HolidayResponse(HolidayBase):
+    id: int
+    user_id: int
+    
+    class Config:
+        from_attributes = True
+
+
 class WeeklyLogBase(BaseModel):
     week_number: int
     day_of_week: int
@@ -74,6 +111,7 @@ class WeeklyLogBase(BaseModel):
     subject_name: str
     lesson_name: str
     notes: Optional[str] = None
+    class_id: Optional[int] = None
 
 
 class WeeklyLogCreate(WeeklyLogBase):

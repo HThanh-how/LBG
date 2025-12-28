@@ -55,18 +55,73 @@ export const authAPI = {
   },
 }
 
+export const classAPI = {
+  getClasses: async () => {
+    const response = await api.get(`${API_V1_PREFIX}/classes`)
+    return response.data
+  },
+  createClass: async (data: { class_name: string; grade?: string; school_year?: string }) => {
+    const response = await api.post(`${API_V1_PREFIX}/classes`, data)
+    return response.data
+  },
+  deleteClass: async (id: number) => {
+    const response = await api.delete(`${API_V1_PREFIX}/classes/${id}`)
+    return response.data
+  },
+}
+
+export const templateAPI = {
+  downloadTKB: async () => {
+    const response = await api.get(`${API_V1_PREFIX}/templates/tkb`, {
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'Mau_TKB.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  },
+  getSubjectsFromTKB: async () => {
+    const response = await api.get(`${API_V1_PREFIX}/templates/ctgd/subjects`)
+    return response.data
+  },
+  downloadCTGD: async (subject: string) => {
+    const response = await api.get(`${API_V1_PREFIX}/templates/ctgd/${subject}`, {
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `Mau_CTGD_${subject}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  },
+}
+
 export const uploadAPI = {
-  uploadTKB: async (file: File) => {
+  uploadTKB: async (file: File, classId?: number) => {
     const formData = new FormData()
     formData.append('file', file)
+    if (classId) {
+      formData.append('class_id', classId.toString())
+    }
     const response = await api.post(`${API_V1_PREFIX}/upload/tkb`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return response.data
   },
-  uploadCTGD: async (file: File) => {
+  uploadCTGD: async (file: File, classId?: number, subject?: string) => {
     const formData = new FormData()
     formData.append('file', file)
+    if (classId) {
+      formData.append('class_id', classId.toString())
+    }
+    if (subject) {
+      formData.append('subject', subject)
+    }
     const response = await api.post(`${API_V1_PREFIX}/upload/ctgd`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -75,16 +130,20 @@ export const uploadAPI = {
 }
 
 export const weeklyReportAPI = {
-  getWeeklyReport: async (weekNumber: number) => {
-    const response = await api.get(`${API_V1_PREFIX}/weekly-report/${weekNumber}`)
+  getWeeklyReport: async (weekNumber: number, classId?: number) => {
+    const params = classId ? { class_id: classId } : {}
+    const response = await api.get(`${API_V1_PREFIX}/weekly-report/${weekNumber}`, { params })
     return response.data
   },
-  saveWeeklyReport: async (weekNumber: number, logs: any[]) => {
-    const response = await api.post(`${API_V1_PREFIX}/weekly-report/${weekNumber}/save`, logs)
+  saveWeeklyReport: async (weekNumber: number, logs: any[], classId?: number) => {
+    const data = classId ? { logs, class_id: classId } : { logs }
+    const response = await api.post(`${API_V1_PREFIX}/weekly-report/${weekNumber}/save`, data)
     return response.data
   },
-  exportPDF: async (weekNumber: number) => {
+  exportPDF: async (weekNumber: number, classId?: number) => {
+    const params = classId ? { class_id: classId } : {}
     const response = await api.get(`${API_V1_PREFIX}/weekly-report/${weekNumber}/export/pdf`, {
+      params,
       responseType: 'blob',
     })
     const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -95,8 +154,10 @@ export const weeklyReportAPI = {
     link.click()
     link.remove()
   },
-  exportExcel: async (weekNumber: number) => {
+  exportExcel: async (weekNumber: number, classId?: number) => {
+    const params = classId ? { class_id: classId } : {}
     const response = await api.get(`${API_V1_PREFIX}/weekly-report/${weekNumber}/export/excel`, {
+      params,
       responseType: 'blob',
     })
     const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -107,5 +168,33 @@ export const weeklyReportAPI = {
     link.click()
     link.remove()
   },
+  exportAllWeeks: async (startWeek: number, endWeek: number, classId?: number) => {
+    const params = classId ? { class_id: classId } : {}
+    const response = await api.get(`${API_V1_PREFIX}/weekly-report/export/all`, {
+      params: { ...params, start_week: startWeek, end_week: endWeek },
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `bao_giang_tuan_${startWeek}_${endWeek}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  },
 }
 
+export const holidayAPI = {
+  getHolidays: async () => {
+    const response = await api.get(`${API_V1_PREFIX}/holidays`)
+    return response.data
+  },
+  createHoliday: async (data: { holiday_date: string; holiday_name: string }) => {
+    const response = await api.post(`${API_V1_PREFIX}/holidays`, data)
+    return response.data
+  },
+  deleteHoliday: async (id: number) => {
+    const response = await api.delete(`${API_V1_PREFIX}/holidays/${id}`)
+    return response.data
+  },
+}

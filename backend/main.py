@@ -7,7 +7,7 @@ from core.database import Base, engine
 from core.logging_config import setup_logging, get_logger
 from core.middleware import LoggingMiddleware, ExceptionHandlingMiddleware
 from core.rate_limit import setup_rate_limiting
-from api.routes import auth, upload, weekly_report
+from api.routes import auth, upload, weekly_report, templates, classes, holidays
 
 logger = get_logger(__name__)
 
@@ -45,6 +45,9 @@ setup_rate_limiting(app)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(upload.router, prefix=settings.API_V1_PREFIX)
 app.include_router(weekly_report.router, prefix=settings.API_V1_PREFIX)
+app.include_router(templates.router, prefix=settings.API_V1_PREFIX)
+app.include_router(classes.router, prefix=settings.API_V1_PREFIX)
+app.include_router(holidays.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")

@@ -18,11 +18,13 @@ export default function LoginPage() {
     school_name: '',
   })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
 
     try {
@@ -39,12 +41,15 @@ export default function LoginPage() {
           full_name: formData.full_name,
           school_name: formData.school_name,
         })
-        setError('Đăng ký thành công! Vui lòng đăng nhập.')
+        setSuccess('Đăng ký thành công! Vui lòng đăng nhập.')
+        setError('')
         setIsLogin(true)
+        setFormData({ username: '', password: '', full_name: '', school_name: '' })
       }
     } catch (err: any) {
       const errorMessage = err.formattedMessage || err.response?.data?.detail || err.message || 'Có lỗi xảy ra'
       setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage))
+      setSuccess('')
     } finally {
       setLoading(false)
     }
@@ -96,8 +101,13 @@ export default function LoginPage() {
               required
             />
           </div>
+          {success && (
+            <div className="p-3 text-sm text-green-600 bg-green-50 rounded border border-green-200">
+              {success}
+            </div>
+          )}
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded">
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded border border-red-200">
               {error}
             </div>
           )}
@@ -111,6 +121,7 @@ export default function LoginPage() {
             onClick={() => {
               setIsLogin(!isLogin)
               setError('')
+              setSuccess('')
             }}
             className="text-sm text-blue-600 hover:underline"
           >

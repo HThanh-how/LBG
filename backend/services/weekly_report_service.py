@@ -5,7 +5,7 @@ from collections import defaultdict
 from repositories.timetable_repository import TimetableRepository
 from repositories.teaching_program_repository import TeachingProgramRepository
 from repositories.weekly_log_repository import WeeklyLogRepository
-from models import User
+from models import User, Holiday
 from core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -144,4 +144,8 @@ class WeeklyReportService:
         )
         
         return timetables, teaching_programs, weekly_logs
+    
+    def get_holidays_for_user(self, user_id: int) -> list:
+        holidays = self.db.query(Holiday).filter(Holiday.user_id == user_id).all()
+        return holidays
 
