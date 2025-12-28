@@ -73,25 +73,38 @@ def preview_all_weeks(
     if start_week < 1 or end_week > 40 or start_week > end_week:
         raise NotFoundException("Invalid week range")
     
-    timetables = weekly_service.timetable_repo.get_by_user_id(current_user.id)
-    teaching_programs = weekly_service.teaching_program_repo.get_by_user_id(current_user.id)
-    all_weekly_logs = []
-    for week in range(start_week, end_week + 1):
-        logs = weekly_service.weekly_log_repo.get_by_user_and_week(current_user.id, week)
-        all_weekly_logs.extend(logs)
-    
-    holidays = weekly_service.get_holidays_for_user(current_user.id)
-    
-    # Lấy thông tin class nếu có
+    # Lấy thông tin class
+    from models import Class, WeeklyLog
     reviewer_name = None
     teacher_name = current_user.full_name
+    location = "Long Tiên"
+    
     if class_id:
-        from models import Class
-        class_obj = db.query(Class).filter(Class.id == class_id).first()
+        class_obj = db.query(Class).filter(Class.id == class_id, Class.user_id == current_user.id).first()
         if class_obj:
             reviewer_name = class_obj.reviewer_name
             if class_obj.teacher_name:
                 teacher_name = class_obj.teacher_name
+            if class_obj.location:
+                location = class_obj.location
+    
+    # Lấy dữ liệu
+    timetables = weekly_service.timetable_repo.get_by_user_id(current_user.id)
+    teaching_programs = weekly_service.teaching_program_repo.get_by_user_id(current_user.id)
+    all_weekly_logs = []
+    for week in range(start_week, end_week + 1):
+        # Lấy logs theo class_id nếu có, nếu không thì lấy tất cả
+        if class_id:
+            logs = db.query(WeeklyLog).filter(
+                WeeklyLog.user_id == current_user.id,
+                WeeklyLog.week_number == week,
+                WeeklyLog.class_id == class_id
+            ).all()
+        else:
+            logs = weekly_service.weekly_log_repo.get_by_user_and_week(current_user.id, week)
+        all_weekly_logs.extend(logs)
+    
+    holidays = weekly_service.get_holidays_for_user(current_user.id)
     
     # Tạo HTML preview
     html_content = f"""
@@ -104,18 +117,21 @@ def preview_all_weeks(
         <style>
             * {{
                 font-family: "Times New Roman", Times, serif;
+                color: #000000;
             }}
             body {{
                 font-family: "Times New Roman", Times, serif;
                 margin: 0;
                 padding: 20px;
-                background: #fff;
+                background: #ffffff;
+                color: #000000;
             }}
             .container {{
-                background: white;
+                background: #ffffff;
                 padding: 30px;
                 margin-bottom: 40px;
                 page-break-after: always;
+                color: #000000;
             }}
             .container:last-child {{
                 page-break-after: auto;
@@ -123,46 +139,50 @@ def preview_all_weeks(
             .header {{
                 text-align: center;
                 margin-bottom: 25px;
+                color: #000000;
             }}
             .header h1 {{
                 font-size: 18px;
                 font-weight: bold;
                 margin: 0 0 10px 0;
                 text-transform: uppercase;
+                color: #000000;
             }}
             .header .week-info {{
                 font-size: 14px;
                 margin-top: 5px;
+                color: #000000;
             }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
                 margin-bottom: 30px;
                 font-size: 13px;
+                border: 2px solid #000000;
             }}
             th, td {{
-                border: 1px solid #000;
+                border: 1px solid #000000;
                 padding: 8px 10px;
                 text-align: left;
                 vertical-align: top;
+                color: #000000;
             }}
             th {{
-                background-color: #f0f0f0;
-                color: #000;
+                background-color: #e8e8e8;
+                color: #000000;
                 font-weight: bold;
                 text-align: center;
                 font-size: 13px;
+                border: 1px solid #000000;
             }}
             td {{
                 font-size: 12px;
-                color: #000;
-                background-color: #fff;
+                color: #000000;
+                background-color: #ffffff;
+                border: 1px solid #000000;
             }}
             tr:nth-child(even) td {{
-                background-color: #fafafa;
-            }}
-            tr:hover td {{
-                background-color: #f5f5f5;
+                background-color: #ffffff;
             }}
             .day-cell {{
                 text-align: center;
@@ -184,18 +204,22 @@ def preview_all_weeks(
                 display: flex;
                 justify-content: space-between;
                 font-size: 12px;
+                color: #000000;
             }}
             .signature-left {{
                 text-align: left;
+                color: #000000;
             }}
             .signature-right {{
                 text-align: right;
+                color: #000000;
             }}
             .signature-line {{
                 margin-top: 50px;
-                border-top: 1px solid #000;
+                border-top: 1px solid #000000;
                 padding-top: 5px;
                 text-align: center;
+                color: #000000;
             }}
         </style>
     </head>
@@ -204,8 +228,11 @@ def preview_all_weeks(
     
     # Tạo HTML cho mỗi tuần
     for week_number in range(start_week, end_week + 1):
-        week_start, week_end = get_week_dates(datetime.now().year, week_number)
+        # Lấy week_logs theo class_id
         week_logs = [log for log in all_weekly_logs if log.week_number == week_number]
+        
+        # Tính toán ngày bắt đầu và kết thúc tuần
+        week_start, week_end = get_week_dates(datetime.now().year, week_number)
         data = export_service._build_report_data(
             timetables, teaching_programs, week_logs, week_number, holidays
         )
@@ -298,7 +325,7 @@ def preview_all_weeks(
                     <div class="signature-line">""" + (reviewer_name or "") + """</div>
                 </div>
                 <div class="signature-right">
-                    <div>Long Tiên, ngày """ + str(datetime.now().day) + """ tháng """ + str(datetime.now().month) + """ năm """ + str(datetime.now().year) + """</div>
+                    <div>""" + location + """, ngày """ + str(datetime.now().day) + """ tháng """ + str(datetime.now().month) + """ năm """ + str(datetime.now().year) + """</div>
                     <div style="margin-top: 10px;"><strong>GVPT</strong></div>
                     <div class="signature-line">""" + teacher_name + """</div>
                 </div>

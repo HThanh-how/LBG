@@ -29,6 +29,7 @@ class Class(Base):
     school_year = Column(String)
     reviewer_name = Column(String, nullable=True)  # Tổ trưởng chuyên môn
     teacher_name = Column(String, nullable=True)  # Giáo viên phụ trách (GVPT)
+    location = Column(String, nullable=True)  # Địa điểm (ví dụ: Long Tiên)
     
     user = relationship("User", back_populates="classes")
     timetables = relationship("Timetable", back_populates="class_obj")

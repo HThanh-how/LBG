@@ -73,6 +73,7 @@ class ClassBase(BaseModel):
     school_year: Optional[str] = None
     reviewer_name: Optional[str] = None  # Tổ trưởng chuyên môn
     teacher_name: Optional[str] = None  # Giáo viên phụ trách (GVPT)
+    location: Optional[str] = None  # Địa điểm (ví dụ: Long Tiên)
 
 
 class ClassCreate(ClassBase):
@@ -85,6 +86,7 @@ class ClassUpdate(BaseModel):
     school_year: Optional[str] = None
     reviewer_name: Optional[str] = None
     teacher_name: Optional[str] = None
+    location: Optional[str] = None
 
 
 class ClassResponse(ClassBase):

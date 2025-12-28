@@ -33,6 +33,7 @@ def create_class(
         school_year=class_data.school_year,
         reviewer_name=class_data.reviewer_name,
         teacher_name=class_data.teacher_name,
+        location=class_data.location,
     )
     db.add(new_class)
     db.commit()
@@ -68,6 +69,8 @@ def update_class(
         class_obj.reviewer_name = class_data.reviewer_name
     if class_data.teacher_name is not None:
         class_obj.teacher_name = class_data.teacher_name
+    if class_data.location is not None:
+        class_obj.location = class_data.location
     
     db.commit()
     db.refresh(class_obj)
