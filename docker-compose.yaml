@@ -25,7 +25,7 @@ services:
       dockerfile: Dockerfile
     container_name: lbg_backend
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "${BACKEND_PORT:-8020}:8000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       USE_SQLITE: ${USE_SQLITE}
