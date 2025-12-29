@@ -4,6 +4,67 @@
 
 Coolify sử dụng Nixpacks để tự động detect loại ứng dụng. Với monorepo có cả backend (Python) và frontend (Node.js), Nixpacks không thể tự động detect được.
 
+## ⚠️ QUAN TRỌNG: Dự án có 2 Port
+
+Dự án có **2 services riêng biệt**:
+- **Backend**: Port `8000` (Python FastAPI) 
+- **Frontend**: Port `3000` (Next.js)
+
+Bạn cần tạo **2 applications riêng** trong Coolify:
+1. **Application 1**: Deploy Backend (port 8000)
+2. **Application 2**: Deploy Frontend (port 3000) - sau khi backend đã chạy
+
+Xem file [COOLIFY_FORM_GUIDE.md](./COOLIFY_FORM_GUIDE.md) để biết cách điền form chi tiết.
+
+## Cấu hình Repository trong Coolify
+
+### Bước 1: Commit và Push code lên GitHub
+
+Trước tiên, bạn cần commit các file mới và push lên repository:
+
+```bash
+# Kiểm tra các file đã thay đổi
+git status
+
+# Thêm các file mới
+git add Dockerfile nixpacks.toml .dockerignore COOLIFY_DEPLOY.md
+
+# Commit
+git commit -m "Add Coolify deployment configuration"
+
+# Push lên GitHub
+git push origin main
+```
+
+### Bước 2: Cấu hình Repository trong Coolify
+
+1. **Vào ứng dụng của bạn trong Coolify**
+2. **Settings → Source**: 
+   - **Repository**: `HThanh-how/LBG` (hoặc URL đầy đủ của repository)
+   - **Branch**: `main`
+   - **Build Pack**: Chọn **"Dockerfile"** (không chọn Nixpacks)
+   - **Dockerfile Path**: `Dockerfile` (để mặc định)
+   - **Root Directory**: `/` (để mặc định)
+
+### Bước 3: Trigger Deployment
+
+Coolify có 2 cách để pull và deploy code:
+
+#### Cách 1: Tự động (Auto Deploy)
+- Coolify sẽ tự động pull và deploy khi có commit mới lên branch `main`
+- Đảm bảo trong Settings → Source → **Auto Deploy** đã được bật
+
+#### Cách 2: Manual (Thủ công)
+- Vào trang ứng dụng trong Coolify
+- Click nút **"Deploy"** hoặc **"Redeploy"**
+- Coolify sẽ tự động pull code mới nhất từ repository và build lại
+
+### Bước 4: Kiểm tra Deployment Logs
+
+Sau khi trigger deployment, bạn có thể xem logs trong Coolify để theo dõi quá trình:
+- Build logs: Xem quá trình build Docker image
+- Runtime logs: Xem logs khi ứng dụng chạy
+
 ## Giải pháp
 
 ### Cách 1: Deploy Backend (Khuyến nghị)
